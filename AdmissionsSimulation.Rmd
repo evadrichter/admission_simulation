@@ -1,0 +1,116 @@
+---
+title: "Simulation"
+author: "Eva Richter"
+date: "2023-09-25"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+```
+
+
+```{r cars}
+# Number of applicants
+n_applicants <- 5000000
+
+# Generate academic performance scores from a normal distribution
+academic_performance <- rnorm(n_applicants, mean = 0.0, sd = 1)
+
+# Normalize the variable
+min_score <- min(academic_performance)
+max_score <- max(academic_performance)
+normalized_academic_performance <- (academic_performance - min_score) / (max_score - min_score)
+
+#Visualization to check results
+hist(normalized_academic_performance)
+
+# Generate application strength scores on a discrete random distribution from 0 to 10
+application_strength <- sample(0:10, n_applicants, replace = TRUE)
+
+#Normalize the variable
+min_score <- min(application_strength)
+max_score <- max(application_strength)
+normalized_application_strength <- (application_strength - min_score) / (max_score - min_score)
+
+# Visualization to check results
+hist(normalized_application_strength)
+
+# Generate legacy status (0 or 1) for 3% of applicants
+legacy_status <- sample(c(0, 1), n_applicants, replace = TRUE, prob = c(0.97, 0.03))
+
+# Generate luck scores from a continuous random scale
+luck <- runif(n_applicants, min = 0, max = 1)
+
+# Calculate the weighted scores
+weighted_score <- 0.75 * normalized_academic_performance + 0.15 * normalized_application_strength + 0.05 * legacy_status + 0.05 * luck
+
+# Calculate the weighted score without considering legacy and luck
+weighted_Score_No_Legacy_Luck <- 0.75 * normalized_academic_performance + 0.15 * normalized_application_strength
+
+
+# Create a data frame to store simulated data
+admissions_data <- data.frame(
+  Academic_Performance = normalized_academic_performance,
+  Application_Strength = normalized_application_strength,
+  Legacy_Status = legacy_status,
+  Luck = luck,
+  Weighted_Score = weighted_score,
+  Weighted_Score_No_Legacy_Luck = weighted_Score_No_Legacy_Luck
+)
+
+# Sort the applicants by their weighted scores in descending order
+admissions_data <- admissions_data[order(-admissions_data$Weighted_Score), ]
+
+# Calculate the number of applicants to admit (3% of total applicants)
+admission_rate <- 0.03
+n_admitted <- round(n_applicants * admission_rate)
+
+# Create an indicator variable for admission (1 for admitted, 0 for not admitted)
+admissions_data$Admitted <- ifelse(1:n_applicants <= n_admitted, 1, 0)
+
+
+# Sort the applicants by their weighted scores without legacy and luck
+admissions_data <- admissions_data[order(-admissions_data$Weighted_Score_No_Legacy_Luck), ]
+
+# Create an indicator variable for admission without legacy and luck (1 for admitted, 0 for not admitted)
+admissions_data$Admitted_No_Legacy_Luck <- ifelse(1:n_applicants <= n_admitted, 1, 0)
+
+# Calculate the number of applicants with Admitted = 1 but not Admitted_No_Legacy_Luck = 1
+count_diff <- sum(admissions_data$Admitted == 1 & admissions_data$Admitted_No_Legacy_Luck == 0)
+
+
+# Divide the count by Number of admitted students
+result <- count_diff / (0.03*n_applicants)
+
+result
+
+```
+
+
+```{r cars}
+# Calculate Bayes' probability of P(Accepted | Legacy)
+
+# Calculate prior: How many legacy students?
+p_b <- sum(admissions_data$Legacy_Status == 1) / n_applicants
+
+# How many legacy students were admitted?
+legacy_admitted <- nrow(admissions_data[admissions_data$Legacy_Status == 1 & admissions_data$Admitted == 1, ])
+
+# What is the P(Legacy | Accepted)
+p_legacy_given_accepted <- legacy_admitted/n_admitted
+
+# What is P(Accepted?)
+p_a <- admission_rate
+
+# Calculate Bayes P(Accepted | Legacy) = P(Legacy | Accepted) * P(Accepted) / P(Legacy)
+bayes <- p_a * p_legacy_given_accepted / p_b
+
+bayes
+
+```
+
+
